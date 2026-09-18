@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IotGatewayLearning.Common\IotGatewayLearning.Common.csproj" />
+    <ProjectReference Include="..\IotGatewayLearning.Domain\IotGatewayLearning.Domain.csproj" />
+    <ProjectReference Include="..\IotGatewayLearning.Infrastructure\IotGatewayLearning.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
