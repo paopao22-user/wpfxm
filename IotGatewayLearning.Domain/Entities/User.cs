@@ -32,5 +32,12 @@ namespace IotGatewayLearning.Domain.Entities
 
         [Column("last_login_at")]
         public DateTime? LastLoginAt { get; set; }
+
+
+        // ==============================
+        // RBAC导航属性
+        // 一个用户可以拥有多个角色
+        // ==============================
+        public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     }
 }

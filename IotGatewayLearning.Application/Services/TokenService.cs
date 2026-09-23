@@ -25,9 +25,9 @@ namespace IotGatewayLearning.Application.Services
             // 1.读取JWT配置：密钥、签发者、使用者
             string key = _configuration["Jwt:Key"] ?? throw new Exception("未配置 Jwt:Key");
 
-            string issuer = _configuration["Jwt:Issuer"] ?? "IotGatewayLearningApi";
+            string issuer = _configuration["Jwt:Issuer"] ?? throw new Exception("未配置 Jwt:Issuer");
 
-            string audience = _configuration["Jwt:Audience"] ?? "WpfIotLearningPrism";
+            string audience = _configuration["Jwt:Audience"] ?? throw new Exception("未配置 Jwt:Audience");
 
             // 2.设置过期时间
             DateTime expires = DateTime.UtcNow.AddHours(8);     // JWT 和服务器时间一般采用 UTC，避免服务器时区变化造成歧义
@@ -44,7 +44,7 @@ namespace IotGatewayLearning.Application.Services
             };
 
 
-            // 4.把密钥转换为字节：new  SymmetricSecurityKey()：把这一串字节正式包装成一个“对称签名密钥”。
+            // 4.把密钥转换为字节：new  SymmetricSecurityKey()：把这一串字节正式包装成一个“对称签名密钥”,对称密钥这样保证认证和授权使用的是同一把密钥。
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));    // 将字符串密钥转为二进制字节数组
 
 
