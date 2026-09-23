@@ -15,8 +15,7 @@ namespace IotGatewayLearning.Infrastructure.Migrations
             migrationBuilder.AlterDatabase()
                 .Annotation("MySql:CharSet", "utf8mb4");
 
-            // ⬇️ 加上这一行：如果之前迁移中断残留了这 4 张 RBAC 空表，先清理干净再重新完整创建
-            migrationBuilder.Sql("DROP TABLE IF EXISTS role_permissions, user_roles, permissions, roles;");
+            
 
 
             migrationBuilder.CreateTable(
@@ -58,28 +57,28 @@ namespace IotGatewayLearning.Infrastructure.Migrations
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
-            //migrationBuilder.CreateTable(
-            //    name: "users",
-            //    columns: table => new
-            //    {
-            //        id = table.Column<long>(type: "bigint", nullable: false)
-            //            .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-            //        username = table.Column<string>(type: "longtext", nullable: false)
-            //            .Annotation("MySql:CharSet", "utf8mb4"),
-            //        password_hash = table.Column<string>(type: "longtext", nullable: false)
-            //            .Annotation("MySql:CharSet", "utf8mb4"),
-            //        real_name = table.Column<string>(type: "longtext", nullable: false)
-            //            .Annotation("MySql:CharSet", "utf8mb4"),
-            //        role = table.Column<string>(type: "longtext", nullable: false)
-            //            .Annotation("MySql:CharSet", "utf8mb4"),
-            //        status = table.Column<sbyte>(type: "tinyint", nullable: false),
-            //        last_login_at = table.Column<DateTime>(type: "datetime(6)", nullable: true)
-            //    },
-            //    constraints: table =>
-            //    {
-            //        table.PrimaryKey("PK_users", x => x.id);
-            //    })
-            //    .Annotation("MySql:CharSet", "utf8mb4");
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    username = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    password_hash = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    real_name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    role = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    status = table.Column<sbyte>(type: "tinyint", nullable: false),
+                    last_login_at = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "role_permissions",
