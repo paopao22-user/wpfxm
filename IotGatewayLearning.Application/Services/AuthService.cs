@@ -39,11 +39,11 @@ namespace IotGatewayLearning.Application.Services
                 throw new UnauthorizedAppException("用户名或密码错误");
             }
 
-            // 3. 先取出用户名，并去掉前后空格
+            // 2. 先取出用户名，并去掉前后空格
             var username = request.Username.Trim();
 
-            // 3.查询用户
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Username == username);
+            // 3.查询 User + RBAC
+            var user = await _unitOfWork.Users.GetByUsernameWithRbacAsync(username);
 
             // 4.用户不存在
             if (user == null)
@@ -71,20 +71,36 @@ namespace IotGatewayLearning.Application.Services
                 throw new UnauthorizedAppException("用户名或密码错误");
             }
 
-            // 7.生成 JWT
+            //7.提取角色
+            var roles = user.UserRoles
+                .Where(x => x.Role.Status == 1)
+                .Select(x => x.Role.Code)
+                .Distinct()
+                .ToList();
+
+            //8.提取权限
+            var permissions = user.UserRoles
+                .Where(x => x.Role.Status == 1)
+                .SelectMany(x => x.Role.RolePermissions)
+                .Where(x => x.Permission.Status == 1)
+                .Select(x => x.Permission.Code)
+                .Distinct()
+                .ToList();
+
+            // 9.生成 JWT
             var (token, expiresAt) = _tokenService.CreateToken(user);
 
-            //8.更新最后登录时间
+            //10.更新最后登录时间
             user.LastLoginAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync();   //提交到数据库
 
             // ==============================
-            // 9. 登录成功日志
+            // 11. 登录成功日志
             // ==============================
             _logger.LogInformation("登录成功，用户id为:{UserId}, 用户账号为:{Username}", user.Id, user.Username);
 
-            //10.返回登录结果
+            //12.返回登录结果
             return new LoginResponseDto
             {
                 Token = token,
@@ -100,6 +116,10 @@ namespace IotGatewayLearning.Application.Services
                     RealName = user.RealName,
 
                     Role = user.Role,
+
+                    Roles = roles,
+
+                    Permissions = permissions,
 
                     LastLoginAt = user.LastLoginAt
                 }

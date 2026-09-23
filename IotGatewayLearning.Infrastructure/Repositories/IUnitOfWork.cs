@@ -9,7 +9,7 @@ namespace IotGatewayLearning.Infrastructure.Repositories
 {
     public interface IUnitOfWork
     {
-        IUserRepository<User> Users { get; }    //UnitOfWork 对外提供一个“用户仓储”
+        IUserRepository Users { get; }    //UnitOfWork 对外提供一个“用户仓储”
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

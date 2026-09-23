@@ -1,4 +1,5 @@
-﻿using System;
+﻿using IotGatewayLearning.Domain.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,11 @@ namespace IotGatewayLearning.Application.DTOs
 
         // 角色名称（用于客户端根据角色判断界面按钮的显示/隐藏权限）
         public string Role { get; set; } = string.Empty;
+
+        // 新 RBAC
+        public List<string> Roles { get; set; } = new();
+
+        public List<string> Permissions { get; set; } = new();
 
         public DateTime? LastLoginAt { get; set; }  
     }

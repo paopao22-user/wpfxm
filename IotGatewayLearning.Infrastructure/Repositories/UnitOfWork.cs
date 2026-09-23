@@ -28,6 +28,8 @@ namespace IotGatewayLearning.Infrastructure.Repositories
 
         
 
+
+
         // 统一异步提交持久化方法
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
