@@ -1,4 +1,5 @@
 ﻿using IotGatewayLearning.Domain.Entities;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -20,7 +21,7 @@ namespace IotGatewayLearning.Application.Services
             _configuration = configuration;                     // 初始化配置字段
         }
 
-        public (string Token, long ExpiresAt) CreateToken(User user)        // 核心签发方法实现
+        public (string Token, long ExpiresAt) CreateToken(User user, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions)        // 核心签发方法实现
         {
             // 1.读取JWT配置：密钥、签发者、使用者
             string key = _configuration["Jwt:Key"] ?? throw new Exception("未配置 Jwt:Key");
@@ -40,8 +41,19 @@ namespace IotGatewayLearning.Application.Services
 
                 new Claim(ClaimTypes.Name, user.Username),  // 注入登录用户名 (用于业务展示与日志审计)
 
-                new Claim(ClaimTypes.Role, user.Role)       // 注入角色权限字符串 (用于 API 接口权限门禁拦截)
+                
             };
+            //把所有 Role 加进去Claims身份信息里
+            foreach (var role in roles.Distinct())
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            //把所有 Permission 加进去Claims身份信息里
+            foreach(var permission in permissions.Distinct())
+            {
+                claims.Add(new Claim("permission", permission));
+            }
 
 
             // 4.把密钥转换为字节：new  SymmetricSecurityKey()：把这一串字节正式包装成一个“对称签名密钥”,对称密钥这样保证认证和授权使用的是同一把密钥。

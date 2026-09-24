@@ -10,6 +10,6 @@ namespace IotGatewayLearning.Application.Services
     public interface ITokenService
     {
         //(string Token, long ExpiresAt):代表一次性返回两个东西，Token和ExpiresAt
-        (string Token, long ExpiresAt) CreateToken(User user);
+        (string Token, long ExpiresAt) CreateToken(User user, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions);
     }
 }

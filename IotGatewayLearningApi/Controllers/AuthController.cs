@@ -63,12 +63,17 @@ namespace IotGatewayLearningApi.Controllers
         [HttpGet("me")]
         public IActionResult Me()
         {
-            //读取Claim里面的User信息
+            //1.读取Claim里面的User信息
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            // 2. 当前用户名
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
 
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            // 3. 当前所有角色
+            var roles = User.FindAll(ClaimTypes.Role)?.Select(x => x.Value).ToList();
+
+            // 4. 当前所有权限
+            var permissions = User.FindAll("permission").Select(x => x.Value).ToList();
 
             return Ok(new ApiResponse<object>
             {
@@ -78,12 +83,13 @@ namespace IotGatewayLearningApi.Controllers
                 {
                     UserId = userId,
                     Username = username,
-                    Role = role
+                    Role = roles,
+                    Permission = permissions
                 }
             });
         }
 
-        [Authorize(Roles="Admin")]
+        [Authorize(Roles="admin")]
         [HttpGet("admintest")]
         public IActionResult AdminTest()
         {

@@ -88,7 +88,8 @@ namespace IotGatewayLearning.Application.Services
                 .ToList();
 
             // 9.生成 JWT
-            var (token, expiresAt) = _tokenService.CreateToken(user);
+            //把当前用户 + 角色 + 权限一起交给 TokenService
+            var (token, expiresAt) = _tokenService.CreateToken(user,roles, permissions);
 
             //10.更新最后登录时间
             user.LastLoginAt = DateTime.UtcNow;
