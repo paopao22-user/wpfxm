@@ -1,6 +1,7 @@
 ﻿using IotGatewayLearning.Application.DTOs;
 using IotGatewayLearning.Application.Services;
 using IotGatewayLearning.Common.Responses;
+using IotGatewayLearning.Common.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -86,6 +87,30 @@ namespace IotGatewayLearningApi.Controllers
                     Role = roles,
                     Permission = permissions
                 }
+            });
+        }
+
+        [Authorize(Policy =PermissionCodes.DeviceRead)]
+        [HttpGet("readtest")]
+        public IActionResult ReadTest()
+        {
+            return Ok(new ApiResponse<string>
+            {
+                Code = 200,
+                Message = "查看设备权限验证通过",
+                Data = "当前用户拥有 device:read"
+            });
+        }
+
+        [Authorize(Policy = PermissionCodes.DeviceControl)]
+        [HttpGet("controltest")]
+        public IActionResult ControlTest()
+        {
+            return Ok(new ApiResponse<string>
+            {
+                Code = 200,
+                Message = "控制设备权限验证通过",
+                Data = "仅验证 device:control；没有执行设备控制"
             });
         }
 

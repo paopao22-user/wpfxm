@@ -14,6 +14,7 @@ using Serilog;
 using System.Text;
 using System.Security.Claims;
 using IotGatewayLearning.Common.Responses;
+using IotGatewayLearning.Common.Security;
 
 
 var builder = WebApplication.CreateBuilder(args);   //创建整个 ASP.NET Core 应用的“装配器”
@@ -131,7 +132,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // ==============================
 // JWT Authorization 注册jwt授权服务
 // ==============================
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    //第一层 规则名：注册策略名字:我在授权系统里登记一条规则，它的名字叫 device:read.
+    options.AddPolicy(PermissionCodes.DeviceRead,
+    //第二层 规则内容：规定通过条件:使用这条规则的用户，必须有 `permission = device:read` 这条 Claim.
+    policy => policy.RequireClaim("permission", PermissionCodes.DeviceRead));
+
+    //规则名：在授权系统登记一条规则
+    options.AddPolicy(PermissionCodes.DeviceControl,
+    //规则内容： 规定通过条件
+    policy => policy.RequireClaim("permission", PermissionCodes.DeviceControl));
+});
 
 
 
