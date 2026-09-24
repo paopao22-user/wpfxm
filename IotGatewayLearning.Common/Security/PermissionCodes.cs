@@ -11,5 +11,7 @@ namespace IotGatewayLearning.Common.Security
         public const string DeviceRead = "device:read";
 
         public const string DeviceControl = "device:control";
+
+        public const string UserManage = "user:manage";
     }
 }

@@ -1,12 +1,11 @@
 ﻿using IotGatewayLearning.Application.DTOs;
-using IotGatewayLearning.Application.Services;
 using IotGatewayLearning.Common.Exceptions;
 using IotGatewayLearning.Domain.Entities;
-using IotGatewayLearning.Infrastructure.Repositories;
 using Moq;
-using System.Linq.Expressions;
 using Xunit;
 using Microsoft.Extensions.Logging;
+using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Application.Services;
 
 namespace IotGatewayLearning.Tests.Services
 {
@@ -95,7 +94,7 @@ namespace IotGatewayLearning.Tests.Services
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
             // 假的用户仓储
-            var userRepositoryMock = new Mock<IRepository<User>>();
+            var userRepositoryMock = new Mock<IUserRepository>();
 
             var loggerMock = new Mock<ILogger<AuthService>>();
 
@@ -106,10 +105,9 @@ namespace IotGatewayLearning.Tests.Services
             // 如果别人访问 Users，就把假的 userRepository 给他: .Returns(userRepositoryMock.Object)
             unitOfWorkMock.Setup(u => u.Users).Returns(userRepositoryMock.Object);
 
-            // 告诉假的用户仓储：
-            // 如果有人调用 FirstOrDefaultAsync 查询用户
-            // 就返回 null，模拟“数据库找不到用户”
-            userRepositoryMock.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User?)null);
+            // 当前 AuthService 使用的是带 RBAC 的用户名查询；模拟用户不存在。
+            userRepositoryMock.Setup(r => r.GetByUsernameWithRbacAsync("admin"))
+                .ReturnsAsync((User?)null);
 
             // 创建真正要测试的 AuthService
             var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object);

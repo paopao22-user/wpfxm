@@ -1,4 +1,5 @@
 ﻿using IotGatewayLearning.Infrastructure.Data;
+using IotGatewayLearning.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

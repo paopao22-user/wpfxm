@@ -1,9 +1,4 @@
-
-
-
-using IotGatewayLearning.Application.Services;
 using IotGatewayLearning.Infrastructure.Data;
-using IotGatewayLearning.Infrastructure.Repositories;
 using IotGatewayLearningApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +11,10 @@ using System.Security.Claims;
 using IotGatewayLearning.Common.Responses;
 using IotGatewayLearning.Common.Security;
 using IotGatewayLearningApi.Security;
+using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Application.Services;
+using IotGatewayLearning.Application.Services.Interfaces;
+using IotGatewayLearning.Application.Services.Implementations;
 
 
 var builder = WebApplication.CreateBuilder(args);   //创建整个 ASP.NET Core 应用的“装配器”
@@ -102,10 +101,16 @@ builder.Services.AddAuthorization(options =>
     //第二层 规则内容：规定通过条件:使用这条规则的用户，必须有 `permission = device:read` 这条 Claim.
     policy => policy.RequireClaim("permission", PermissionCodes.DeviceRead));
 
+
     //规则名：在授权系统登记一条规则
     options.AddPolicy(PermissionCodes.DeviceControl,
     //规则内容： 规定通过条件
     policy => policy.RequireClaim("permission", PermissionCodes.DeviceControl));
+
+    //管理用户接口要求当前请求的操作者有 `permission = user:manage`
+    options.AddPolicy(PermissionCodes.UserManage,
+        policy => policy.RequireClaim("permission", PermissionCodes.UserManage));
+
 });
 
 
@@ -154,6 +159,9 @@ builder.Services.AddScoped<RbacJwtEvents>();
 
 //注册 AuthService 登录业务
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+//注册AdminService 管理员服务
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 //注册 TokenService JWT生成服务
 builder.Services.AddScoped<ITokenService, TokenService>();

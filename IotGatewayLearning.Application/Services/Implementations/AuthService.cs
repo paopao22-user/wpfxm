@@ -1,6 +1,5 @@
 ﻿using IotGatewayLearning.Application.DTOs;
 using IotGatewayLearning.Common.Exceptions;
-using IotGatewayLearning.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -8,6 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Application.Services;
+using IotGatewayLearning.Infrastructure.Repositories;
 
 namespace IotGatewayLearning.Application.Services
 {
