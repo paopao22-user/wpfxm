@@ -16,6 +16,28 @@ namespace IotGatewayLearning.Infrastructure.Repositories
             
         }
 
+        /// <summary>
+        /// 通过用户id来查找用户
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<User?> GetByIdWithRbacAsync(long userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users.AsNoTracking()
+                .Include(x => x.UserRoles)
+                .ThenInclude(x => x.Role)
+                .ThenInclude(x => x.RolePermissions)
+                .ThenInclude(x => x.Permission)
+                .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+        }
+
+        /// <summary>
+        /// 通过用户名查找用户
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         public async Task<User?> GetByUsernameWithRbacAsync(string username)
         {
             return await _context.Users

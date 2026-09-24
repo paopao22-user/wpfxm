@@ -15,6 +15,7 @@ using System.Text;
 using System.Security.Claims;
 using IotGatewayLearning.Common.Responses;
 using IotGatewayLearning.Common.Security;
+using IotGatewayLearningApi.Security;
 
 
 var builder = WebApplication.CreateBuilder(args);   //创建整个 ASP.NET Core 应用的“装配器”
@@ -86,46 +87,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // JWT 401 / 403 统一响应:把 JWT 默认产生的 401、403 响应，改造成你项目统一的 ApiResponse JSON 格式。
         // ==============================
         //options.Events = new JwtBearerEvents{...} : JwtBearer，当某些 JWT 事件发生时，我要自己处理
-        options.Events = new JwtBearerEvents    //options.Events:JWT 认证过程中发生某些事情时，要执行什么代码,比如token验证失败触发challege,执行OnChallenge
-        {
-            // --------------------------
-            // 认证失败：401
-            // --------------------------
-            OnChallenge = async context =>
-            {
-                // 阻止 JwtBearer 写默认响应
-                context.HandleResponse();   //告诉框架：这个 Challenge 我已经接管了,默认响应不要再处理。
-
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized; //context.Response:当前这一次 HTTP 请求对应的 HTTP Response
-                //.WriteAsJsonAsync():把c#对象 -> JSON序列化 -> 写入HTTP Response Body
-                await context.Response.WriteAsJsonAsync(new ApiResponse<object>
-                {
-                    Code = 401,
-
-                    Message = "未登录或登录已过期",
-
-                    Data = null
-                });
-            },
-
-
-            // --------------------------
-            // 已认证，但是权限不足：403 ;  用户身份已经认证成功,但是权限不够
-            // --------------------------
-            OnForbidden = async context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-
-                await context.Response.WriteAsJsonAsync(new ApiResponse<object>
-                {
-                    Code = 403,
-
-                    Message = "没有权限访问该资源",
-
-                    Data = null
-                });
-            }
-        };
+        options.EventsType = typeof(RbacJwtEvents);
+        
 
     });
 
@@ -185,6 +148,9 @@ builder.Services.AddDbContext<AppDbContext>(
 
 //注册UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+//注册RbacJwtEvents
+builder.Services.AddScoped<RbacJwtEvents>();
 
 //注册 AuthService 登录业务
 builder.Services.AddScoped<IAuthService, AuthService>();
