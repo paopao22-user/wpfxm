@@ -32,10 +32,19 @@ namespace IotGatewayLearning.Infrastructure.Repositories
             return await _dbSet.AnyAsync(predicate);
         }
 
+        public async Task<List<TEntity>> FindAllAsync(Expression<Func<TEntity, bool>> predicate)
+        {
+            // _dbSet.Where(predicate) 并没有真正查库，它只是在拼装 IQueryable 查询表达式
+            // 直到 await ToListAsync() 时，EF Core 才把整棵树翻译为 SQL 发给 MySQL 执行
+            return await _dbSet.Where(predicate).ToListAsync();
+        }
+
         public void Delete(TEntity entity)
         {
             _dbSet.Remove(entity);
         }
+
+        
 
         public async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate)
         {
