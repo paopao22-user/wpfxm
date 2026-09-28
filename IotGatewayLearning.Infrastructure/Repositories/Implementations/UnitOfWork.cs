@@ -17,6 +17,10 @@ namespace IotGatewayLearning.Infrastructure.Repositories
 
         // 私有缓存字段：用户仓储接口实例（初态为 null）
         private IUserRepository? _users;
+        private IRepository<Role>? _roles;
+        private IRepository<UserRole>? _userRoles;
+        private IRepository<Permission>? _permissions;
+        private IRepository<RolePermission>? _rolePermissions;
 
         // 构造函数：通过依赖注入获取上下文。这样仓储层和工作单元层共享同一个数据库上下文实例，保证事务的一致性。
         public UnitOfWork(AppDbContext context)
@@ -27,7 +31,26 @@ namespace IotGatewayLearning.Infrastructure.Repositories
         // 延迟初始化：暴露用户仓储,这个是一个懒加载的属性，只有在第一次访问时才会创建 Repository<User> 实例
         public IUserRepository Users => _users ??= new UserRepository(_context);
 
-        
+        // 角色仓储懒加载
+        public IRepository<Role> Roles => _roles ??= new Repository<Role>(_context);
+
+        //用户-角色关联仓储懒加载
+        public IRepository<UserRole> UserRoles => _userRoles ??= new Repository<UserRole>(_context);
+
+        /// <summary>
+        /// 权限目录仓储懒加载
+        /// </summary>
+        public IRepository<Permission> Permissions => _permissions ??= new Repository<Permission>(_context);
+
+        /// <summary>
+        /// 角色权限关联仓储懒加载
+        /// </summary>
+        public IRepository<RolePermission> RolePermissions => _rolePermissions ??= new Repository<RolePermission>(_context);
+
+
+
+
+
 
 
 
