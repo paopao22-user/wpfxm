@@ -393,8 +393,8 @@ namespace IotGatewayLearning.Application.Services.Implementations
                 throw new AppException("内置管理员角色不能修改编码或禁用", 409);
             }
 
-            // 步骤 5：判断角色编码 Code 是否真正发生了改变
-            bool codeChanged = role.Code.Equals(newCode, StringComparison.OrdinalIgnoreCase);
+            // 步骤 5：判断角色编码 Code 是否真正发生了改变（必须取反：相等表示没变，不相等才表示发生改变）
+            bool codeChanged = !role.Code.Equals(newCode, StringComparison.OrdinalIgnoreCase);
 
 
             // 步骤 6：如果角色编码发生了变化，执行两项严苛的安全查验

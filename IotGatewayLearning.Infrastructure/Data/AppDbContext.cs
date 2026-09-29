@@ -44,6 +44,13 @@ namespace IotGatewayLearning.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
 
             // ==============================
+            // 1. User 用户表配置
+            // ==============================
+            // 确保登录用户名在全局范围绝对唯一，防范并发注册碰撞与脏数据
+            modelBuilder.Entity<User>().HasIndex(x => x.Username).IsUnique();
+
+
+            // ==============================
             // Role
             // ==============================
             //整体理解：Role 表的 Code 字段建立唯一索引，不允许重复角色编码
