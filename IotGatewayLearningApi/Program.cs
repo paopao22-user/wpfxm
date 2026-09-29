@@ -182,8 +182,30 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
+// 配置 SwaggerGen：加载 API 层与 Application 层的 XML 注释文件
+builder.Services.AddSwaggerGen(options =>
+{
+    // -------------------------------------------------------------
+    // 1. 加载 API 层的 XML 注释（包含 Controllers 接口路由与方法注释）
+    // -------------------------------------------------------------
+    var apiXmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var apiXmlPath = Path.Combine(AppContext.BaseDirectory, apiXmlFile);
+    if (File.Exists(apiXmlPath))
+    {
+        // includeControllerXmlComments: true 表示连同 Controller 类名顶部的注释也一并载入
+        options.IncludeXmlComments(apiXmlPath, includeControllerXmlComments: true);
+    }
+    // -------------------------------------------------------------
+    // 2. 加载 Application 层的 XML 注释（包含 DTO 请求参数与响应实体字段注释）
+    // -------------------------------------------------------------
+    var applicationXmlFile = "IotGatewayLearning.Application.xml";
+    var applicationXmlPath = Path.Combine(AppContext.BaseDirectory, applicationXmlFile);
+    if (File.Exists(applicationXmlPath))
+    {
+        options.IncludeXmlComments(applicationXmlPath);
+    }
+});
 
 var app = builder.Build();
 
