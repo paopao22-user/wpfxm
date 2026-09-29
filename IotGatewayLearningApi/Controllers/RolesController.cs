@@ -12,11 +12,12 @@ namespace IotGatewayLearningApi.Controllers
     [Authorize(Policy = PermissionCodes.UserManage)]
     public class RolesController:ControllerBase
     {
-        private readonly IAdminService _adminService;
-
-        public RolesController(IAdminService adminService)
+        // 核心解耦：专一依赖角色领域服务
+        private readonly IRoleService _roleService;
+        // 构造函数注入 IRoleService
+        public RolesController(IRoleService roleService)
         {
-            _adminService = adminService;
+            _roleService = roleService;
         }
 
         /// <summary>
@@ -28,7 +29,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<List<AdminRoleDto>>>> GetRoles([FromQuery]string? keyword)
         {
             // 1. 调度业务服务层获取数据
-            var roles = await _adminService.GetRolesAsync(keyword);
+            var roles = await _roleService.GetRolesAsync(keyword);
 
             // 2. 统一封装为 200 成功响应模型返回
             return Ok(new ApiResponse<List<AdminRoleDto>>
@@ -61,7 +62,7 @@ namespace IotGatewayLearningApi.Controllers
             }
 
             //调度应用服务层执行查询
-            var role = await _adminService.GetRoleByIdAsync(id);
+            var role = await _roleService.GetRoleByIdAsync(id);
 
             //如果角色没有查询到
             if(role == null)
@@ -93,7 +94,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<AdminRoleDto>>> Create([FromBody] SaveRoleRequest request)
         {
             // 1. 调度业务服务层执行创建
-            var role = await _adminService.CreateRoleAsync(request);
+            var role = await _roleService.CreateRoleAsync(request);
 
             // 2. 返回 200 成功响应并携带新实体数据
             return Ok(new ApiResponse<AdminRoleDto>
@@ -110,7 +111,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<AdminRoleDto>>> Update(long id, [FromBody]SaveRoleRequest request)
         {
             // 1. 调度业务服务层执行修改
-            var role = await _adminService.UpdateRoleAsync(id, request);
+            var role = await _roleService.UpdateRoleAsync(id, request);
 
             return Ok(new ApiResponse<AdminRoleDto>
             {
@@ -126,7 +127,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<object>>> Delete(long id)
         {
             // 1. 调度业务服务层执行软删除
-            await _adminService.DeleteRoleAsync(id);
+            await _roleService.DeleteRoleAsync(id);
 
             // 2. 构造 200 成功响应模型返回
             return Ok(new ApiResponse<object>
@@ -134,6 +135,41 @@ namespace IotGatewayLearningApi.Controllers
                 Code = 200,
                 Message = "删除角色成功",
                 Data = null
+            });
+        }
+
+        /// <summary>
+        /// 查询指定角色已分配的权限 ID 列表
+        /// </summary>
+        /// <param name="id">角色主键 ID</param>
+        /// <returns>已分配的权限 ID 数组</returns>
+        [HttpGet("{id:long}/permissions")]
+        public async Task<ActionResult<ApiResponse<List<long>>>> GetRolePermissions(long id)
+        {
+            // 1. 调用业务服务层执行查询与防线校验
+            var permissions = await _roleService.GetRolePermissionIdsAsync(id);
+
+            // 2. 包装为标准 200 OK 成功响应
+            return Ok(new ApiResponse<List<long>>
+            {
+                Code = 200,
+                Message = "查询分配权限信息成功",
+                Data = permissions
+            });
+        }
+
+        [HttpPut("{id:long}/permissions")]
+        public async Task<ActionResult<ApiResponse<bool>>> SetRolePermissions(long id, [FromBody] AssignIdsRequest request)
+        {
+            // 1. 调度业务服务层执行四道安全防线、差集计算与单事务提交
+            await _roleService.SetRolePermissionsAsync(id, request);
+
+            // 2. 包装为标准化 200 OK 响应，Data 返回 true
+            return Ok(new ApiResponse<bool>
+            {
+                Code = 200,
+                Message = "角色分配权限成功",
+                Data = true
             });
         }
     }

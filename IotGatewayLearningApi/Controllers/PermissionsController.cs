@@ -14,18 +14,18 @@ namespace IotGatewayLearningApi.Controllers
     [Authorize(Policy = PermissionCodes.UserManage)]
     public class PermissionsController: ControllerBase
     {
-        private readonly IAdminService _adminService;
+        private readonly IPermissionService _permissionService;
 
-        public PermissionsController(IAdminService adminService)
+        public PermissionsController(IPermissionService permissionService)
         {
-            _adminService = adminService;
+            _permissionService = permissionService;
         }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<List<AdminPermissionDto>>>> GetPermissions([FromQuery] string? keyword)
         {
             // 1. 调度业务服务层查询数据
-            var permissions = await _adminService.GetPermissionsAsync(keyword);
+            var permissions = await _permissionService.GetPermissionsAsync(keyword);
 
             // 2. 包装为统一成功的 ApiResponse 响应模型返回
             return Ok(new ApiResponse<List<AdminPermissionDto>>
@@ -50,7 +50,7 @@ namespace IotGatewayLearningApi.Controllers
             }
 
             // 步骤 2：调度应用服务层执行查询
-            var permission = await _adminService.GetPermissionByIdAsync(id);
+            var permission = await _permissionService.GetPermissionByIdAsync(id);
 
             // 步骤 3：如果数据库未查询到该实体，按照 RESTful 规范返回 404
             if(permission == null)
@@ -80,7 +80,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<AdminPermissionDto>>> Create([FromBody]SavePermissionRequest request)
         {
             // 1. 调度业务服务层执行创建
-            var permission = await _adminService.CreatePermissionAsync(request);
+            var permission = await _permissionService.CreatePermissionAsync(request);
 
             // 2. 返回 200 成功响应并携带新生成的实体数据（含自增 ID）
             return Ok(new ApiResponse<AdminPermissionDto>
@@ -101,7 +101,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<AdminPermissionDto>>> Update(long id, [FromBody]SavePermissionRequest request)
         {
             // 1. 调度业务服务层执行修改
-            var permission = await _adminService.UpdatePermissionAsync(id, request);
+            var permission = await _permissionService.UpdatePermissionAsync(id, request);
 
             // 2. 包装为标准 200 OK 响应返回
             return Ok(new ApiResponse<AdminPermissionDto>
@@ -120,7 +120,7 @@ namespace IotGatewayLearningApi.Controllers
         [HttpDelete("{id:long}")]
         public async Task<ActionResult<ApiResponse<object>>> Delete(long id)
         {
-            await _adminService.DeletePermissionAsync(id);
+            await _permissionService.DeletePermissionAsync(id);
 
 
             return Ok(new ApiResponse<object>
@@ -140,7 +140,7 @@ namespace IotGatewayLearningApi.Controllers
         public async Task<ActionResult<ApiResponse<List<PermissionNodeDto>>>> GetTree()
         {
             // 1. 调度业务服务层生成层级树
-            var tree = await _adminService.GetPermissionTreeAsync();
+            var tree = await _permissionService.GetPermissionTreeAsync();
 
             // 2. 包装为 200 成功响应返回
             return Ok(new ApiResponse<List<PermissionNodeDto>>

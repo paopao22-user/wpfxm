@@ -160,8 +160,16 @@ builder.Services.AddScoped<RbacJwtEvents>();
 //注册 AuthService 登录业务
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-//注册AdminService 管理员服务
-builder.Services.AddScoped<IAdminService, AdminService>();
+
+
+//注册用户服务UserService
+builder.Services.AddScoped<IUserService, UserService>();
+
+//注册角色服务RoleService
+builder.Services.AddScoped<IRoleService, RoleService>();
+
+//注册权限服务PermissionService
+builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 //注册 TokenService JWT生成服务
 builder.Services.AddScoped<ITokenService, TokenService>();
