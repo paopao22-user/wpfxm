@@ -1,4 +1,4 @@
-﻿using IotGatewayLearning.Application.DTOs;
+using IotGatewayLearning.Application.DTOs;
 using IotGatewayLearning.Common.Responses;
 using System;
 using System.Collections.Generic;
@@ -57,5 +57,18 @@ namespace IotGatewayLearning.Application.Services.Interfaces
         /// 为指定用户完整分配/替换角色列表（基于差集算法幂等更新）
         /// </summary>
         Task SetUserRolesAsync(long userId, AssignIdsRequest request, long actorId);
+
+        /// <summary>
+        /// 保存用户头像：把 OSS 的 objectKey 写进 users.avatar_url
+        /// （⚠️ 存的是 objectKey，不是 URL —— 见 User 实体的注释）
+        /// </summary>
+        Task SaveAvatarKeyAsync(long userId, string objectKey);
+
+        /// <summary>
+        /// 取用户头像的【可访问 URL】：
+        ///   读数据库里的 objectKey → 用 OSS 现签一个临时 URL 返回；
+        ///   没上传过头像就返回 null。
+        /// </summary>
+        Task<string?> GetAvatarUrlAsync(long userId);
     }
 }

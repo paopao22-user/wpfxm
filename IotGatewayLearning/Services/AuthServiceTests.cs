@@ -5,6 +5,7 @@ using Moq;
 using Xunit;
 using Microsoft.Extensions.Logging;
 using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Infrastructure.Storage;
 using IotGatewayLearning.Application.Services;
 
 namespace IotGatewayLearning.Tests.Services
@@ -25,7 +26,7 @@ namespace IotGatewayLearning.Tests.Services
 
             var loggerMock = new Mock<ILogger<AuthService>>();
 
-            var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object);
+            var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object, new Mock<IOssFileStorage>().Object);
 
             var request =
                 new LoginRequestDto
@@ -61,7 +62,7 @@ namespace IotGatewayLearning.Tests.Services
             var tokenServiceMock = new Mock<ITokenService>();
             var loggerMock = new Mock<ILogger<AuthService>>();
 
-            var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object);
+            var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object, new Mock<IOssFileStorage>().Object);
 
             var request = new LoginRequestDto
             {
@@ -110,7 +111,7 @@ namespace IotGatewayLearning.Tests.Services
                 .ReturnsAsync((User?)null);
 
             // 创建真正要测试的 AuthService
-            var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object);
+            var authService = new AuthService(unitOfWorkMock.Object, tokenServiceMock.Object, loggerMock.Object, new Mock<IOssFileStorage>().Object);
 
             // 用户名、密码都填写
             var request = new LoginRequestDto

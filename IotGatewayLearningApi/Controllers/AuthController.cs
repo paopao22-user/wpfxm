@@ -1,5 +1,6 @@
-﻿using IotGatewayLearning.Application.DTOs;
+using IotGatewayLearning.Application.DTOs;
 using IotGatewayLearning.Application.Services;
+using IotGatewayLearning.Application.Services.Interfaces;
 using IotGatewayLearning.Common.Responses;
 using IotGatewayLearning.Common.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -15,10 +16,14 @@ namespace IotGatewayLearningApi.Controllers
         // 1. 声明登录业务服务
         private readonly IAuthService _authService;
 
+        // 拿头像地址要用到用户服务
+        private readonly IUserService _userService;
+
         //2.构造函数注入
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, IUserService userService)
         {
             _authService = authService;
+            _userService = userService;
         }
 
 
@@ -62,7 +67,7 @@ namespace IotGatewayLearningApi.Controllers
 
         [Authorize]
         [HttpGet("me")]
-        public IActionResult Me()
+        public async Task<IActionResult> Me()
         {
             //1.读取Claim里面的User信息
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -76,6 +81,15 @@ namespace IotGatewayLearningApi.Controllers
             // 4. 当前所有权限
             var permissions = User.FindAll("permission").Select(x => x.Value).ToList();
 
+            // 5. 当前用户的头像（可访问的临时 URL；没上传过头像就是 null）
+            //    ⚠️ 这里必须去数据库查 —— JWT 里只放了 id/用户名/角色/权限，没有头像
+            string avatarUrl = null;
+            long userIdValue;
+            if (long.TryParse(userId, out userIdValue))
+            {
+                avatarUrl = await _userService.GetAvatarUrlAsync(userIdValue);
+            }
+
             return Ok(new ApiResponse<object>
             {
                 Code = 200,
@@ -85,7 +99,8 @@ namespace IotGatewayLearningApi.Controllers
                     UserId = userId,
                     Username = username,
                     Role = roles,
-                    Permission = permissions
+                    Permission = permissions,
+                    AvatarUrl = avatarUrl
                 }
             });
         }

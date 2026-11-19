@@ -29,6 +29,20 @@ namespace IotGatewayLearningApi.Middleware
             }
 
             // ==============================
+            // 客户端主动取消请求
+            // ==============================
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                // 客户端已经断开，不再写响应体；499 只用于日志和可观测性。
+                if (!context.Response.HasStarted)
+                {
+                    context.Response.StatusCode = StatusCodes.Status499ClientClosedRequest;
+                }
+
+                _logger.LogDebug("客户端已取消请求，Path：{RequestPath}", context.Request.Path);
+            }
+
+            // ==============================
             // 我们自己定义的业务异常
             // ==============================
             catch (AppException ex)

@@ -1,21 +1,49 @@
+using IotGatewayLearning.Application.AI;
+using IotGatewayLearning.Application.AI.Advisories;
+using IotGatewayLearning.Application.AI.Inspections;
+using IotGatewayLearning.Application.AI.Knowledge;
+using IotGatewayLearning.Application.AI.Mcp;
+using IotGatewayLearning.Application.AI.Tasks;
+using IotGatewayLearning.Application.DTOs.Modbus;
+using IotGatewayLearning.Application.DTOs.Mqtt;
+using IotGatewayLearning.Application.DTOs.Serial;
+using IotGatewayLearning.Application.Services;
+using IotGatewayLearning.Application.Services.Implementations;
+using IotGatewayLearning.Application.Services.Interfaces;
+using IotGatewayLearning.Common.Responses;
+using IotGatewayLearning.Common.Security;
+using IotGatewayLearning.DeviceGateway.Modbus;
+using IotGatewayLearning.Domain.AI;
+using IotGatewayLearning.Domain.AI.Advisories;
+using IotGatewayLearning.Domain.AI.Knowledge;
+using IotGatewayLearning.Domain.AI.Tasks;
+using IotGatewayLearning.Domain.Repositories;
+using IotGatewayLearning.DeviceGateway.Mqtt;
+using IotGatewayLearning.DeviceGateway.Serial;
+using IotGatewayLearning.Infrastructure.AI;
+using IotGatewayLearning.Infrastructure.AI.Advisories;
+using IotGatewayLearning.Infrastructure.AI.Inspections;
+using IotGatewayLearning.Infrastructure.AI.Knowledge;
+using IotGatewayLearning.Infrastructure.AI.Mcp;
+using IotGatewayLearning.Infrastructure.AI.Tasks;
 using IotGatewayLearning.Infrastructure.Data;
+using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Infrastructure.Repositories.Implementations;
+using IotGatewayLearning.Infrastructure.Repositories.Interfaces;
+using IotGatewayLearning.Infrastructure.Storage;
+using IotGatewayLearningApi.AI.Advisories;
 using IotGatewayLearningApi.Middleware;
+using IotGatewayLearningApi.Security;
+using IotGatewayLearningApi.Workers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;   // FormOptions（上传缓冲设置）
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Tokens.Experimental;
 using Serilog;
-using System.Text;
 using System.Security.Claims;
-using IotGatewayLearning.Common.Responses;
-using IotGatewayLearning.Common.Security;
-using IotGatewayLearningApi.Security;
-using IotGatewayLearning.Infrastructure.Repositories;
-using IotGatewayLearning.Application.Services;
-using IotGatewayLearning.Application.Services.Interfaces;
-using IotGatewayLearning.Application.Services.Implementations;
-
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);   //创建整个 ASP.NET Core 应用的“装配器”
 
@@ -111,6 +139,24 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(PermissionCodes.UserManage,
         policy => policy.RequireClaim("permission", PermissionCodes.UserManage));
 
+    //添加设备配置注册授权规则
+    options.AddPolicy(PermissionCodes.DeviceConfigure,
+        policy => policy.RequireClaim("permission", PermissionCodes.DeviceConfigure));
+
+    //设备事件接入：只有带 ai:event:ingest 的账号/桥接程序才能提交巡检事件
+    options.AddPolicy(PermissionCodes.AiEventIngest,
+        policy => policy.RequireClaim("permission", PermissionCodes.AiEventIngest));
+
+    //控制申请审批（Day50）：只有带 device:approve 的账号才能进审批队列/批准/驳回
+    options.AddPolicy(PermissionCodes.DeviceApprove,
+        policy => policy.RequireClaim("permission", PermissionCodes.DeviceApprove));
+
+    //查看控制申请：device:control 或 device:approve 任一即可
+    options.AddPolicy(PermissionCodes.ControlView,
+        policy => policy.RequireAssertion(c =>
+            c.User.HasClaim("permission", PermissionCodes.DeviceControl) ||
+            c.User.HasClaim("permission", PermissionCodes.DeviceApprove)));
+
 });
 
 
@@ -174,12 +220,180 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 //注册 TokenService JWT生成服务
 builder.Services.AddScoped<ITokenService, TokenService>();
 
+//注册DeviceService服务
+builder.Services.AddScoped<IDeviceService, DeviceService>();
+
+//注册DevicePointService服务
+builder.Services.AddScoped<IDevicePointService, DevicePointService>();
+
+//注册DevicePointRepository仓储服务
+builder.Services.AddScoped<IDevicePointRepository, DevicePointRepository>();
+
+//读取 appsettings 里的 "AliOss" 配置段，绑定到 OssOptions 类
+builder.Services.Configure<OssOptions>(builder.Configuration.GetSection("AliOss"));
+
+//注册对象存储（IOssFileStorage 的阿里云 OSS 实现）
+builder.Services.AddScoped<IOssFileStorage, AliOssFileStorage>();
+
+//注册DeviceRepository 仓储服务
+builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
+
+// 设备采样历史仓储
+builder.Services.AddScoped<IDeviceDataRepository, DeviceDataRepository>();
+
+// 设备采样业务服务
+builder.Services.AddScoped<IDeviceDataService, DeviceDataService>();
+
+// ==============================
+// 6. AI 设备分析（Day44）
+// ==============================
+
+// 配置错误在启动阶段暴露，不等用户点击分析才发现缺少密钥。
+builder.Services.AddOptions<AiModelOptions>()
+    .Bind(builder.Configuration.GetSection(AiModelOptions.Section))
+    .ValidateDataAnnotations()
+    .Validate(x => Uri.TryCreate(x.Endpoint, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttps
+        && uri.Host == "api.deepseek.com"
+        && string.IsNullOrEmpty(uri.UserInfo)
+        && string.IsNullOrEmpty(uri.Query)
+        && string.IsNullOrEmpty(uri.Fragment)
+        && uri.AbsolutePath == "/", "本章Endpoint必须为DeepSeek官方HTTPS基础地址")
+    .ValidateOnStart();
+
+// 仓储与 Service 按 HTTP 请求创建，保持 DbContext 作用域一致。
+builder.Services.AddScoped<IAiAnalysisRepository, AiAnalysisRepository>();
+builder.Services.AddScoped<IAiAnalysisService, AiAnalysisService>();
+
+// 连接客户端复用；每次 CompleteAsync 内部仍创建独立 Agent 和 Session。
+builder.Services.AddSingleton<IAiTextClient, DeepSeekMafClient>();
+
+// ==============================
+// 7. AI 设备调查任务（Day45）
+// ==============================
+
+// 仓储、查询、Service 与 MAF Runner 都按 HTTP 请求创建，
+// 保证同一次调查使用同一个 DbContext 作用域。
+builder.Services.AddScoped<IAiTaskRepository, AiTaskRepository>();
+builder.Services.AddScoped<IAiDeviceQuery, AiDeviceQueryService>();
+builder.Services.AddScoped<IAiTaskService, AiTaskService>();
+builder.Services.AddScoped<IAiTaskRunner, MafTaskRunner>();
+
+// ==============================
+// 8. AI 设备知识库（Day46）
+// ==============================
+
+// 检索当前用 MySQL 关键词实现；IKnowledgeVectors 保留将来接向量库的扩展点。
+builder.Services.Configure<KnowledgeOptions>(
+    builder.Configuration.GetSection(KnowledgeOptions.Section));
+builder.Services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
+builder.Services.AddScoped<IKnowledgeSource, LocalKnowledgeSource>();
+builder.Services.AddScoped<IKnowledgeVectors, KeywordKnowledgeVectors>();
+builder.Services.AddScoped<IKnowledgeService, KnowledgeService>();
+
+// ==============================
+// 9. MCP 设备工具权限（Day47）
+// ==============================
+
+// 工具目录与执行入口都在 McpAccessService；
+// 本章不引入 ModelContextProtocol 包，也不暴露 /mcp 协议端点。
+builder.Services.AddScoped<IMcpRepository, McpRepository>();
+builder.Services.AddScoped<McpAccessService>();
+
+// ==============================
+// 10. 设备巡检调度（Day48）
+// ==============================
+
+// 计划与队列仓储、调度服务按请求/按轮次创建，保持 DbContext 作用域一致。
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<InspectionService>();
+
+// 后台 Worker 是单例，每轮自己 CreateScope 解析 Scoped 服务。
+builder.Services.AddHostedService<InspectionWorker>();
+
+// ==============================
+// 11. AI 告警研判与通知分发（Day49）
+// ==============================
+
+// 默认 Notify:Enabled=false：只落 Outbox 待办、不发真实请求。
+builder.Services.Configure<NotificationOptions>(
+    builder.Configuration.GetSection(NotificationOptions.Section));
+builder.Services.AddScoped<IAdvisoryRepository, AdvisoryRepository>();
+builder.Services.AddScoped<AdvisoryService>();
+builder.Services.AddScoped<INotificationSender, WebhookNotificationSender>();
+
+// 15 秒超时 + 禁止自动重定向，避免带签名的请求被转发到意外主机。
+builder.Services.AddHttpClient("Notify", c => c.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+
+builder.Services.AddHostedService<NotificationWorker>();
+
+// ==============================
+// 12. 控制申请人工审批与审计（Day50）
+// ==============================
+
+// 本章只做审批与审计，不下发任何设备命令。
+builder.Services.AddScoped<IControlRepository, ControlRepository>();
+builder.Services.AddScoped<IControlRequestService, ControlRequestService>();
+
+// ==============================
+// 4.串口诊断（Day12）
+// ==============================
+
+// 注册白名单配置：默认只允许 COM11
+builder.Services.AddSingleton(new SerialDiagnosticsOptions());
+
+// 注册串口诊断服务。实现放在 DeviceGateway，
+// 因为它要引用 System.IO.Ports 真正打开 COM 口。
+builder.Services.AddScoped<ISerialDiagnosticService, SerialDiagnosticService>();
+
+// Modbus 诊断白名单（默认只允许 127.0.0.1 / localhost）
+builder.Services.AddSingleton(new ModbusDiagnosticsOptions());
+
+// Modbus 诊断服务（实现在 DeviceGateway，因为它要用 NModbus）
+builder.Services.AddScoped<IModbusDiagnosticService, ModbusDiagnosticService>();
+
+
+// 自动扫描包含 DeviceMappingProfile 的程序集，注册 AutoMapper 服务
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddMaps(typeof(IotGatewayLearning.Application.Mappings.DeviceMappingProfile).Assembly);
+});
+
+
+// ==============================
+// 5. MQTT 诊断（Day14）
+// ==============================
+
+// MQTT 诊断白名单（默认只允许 127.0.0.1 / localhost / ::1）
+builder.Services.AddSingleton(new MqttDiagnosticsOptions());
+
+// MQTT 诊断服务（实现在 DeviceGateway，因为它要用 MQTTnet）
+builder.Services.AddScoped<IMqttDiagnosticService, MqttDiagnosticService>();
 
 // ==============================
 // 4.WebAPI基础服务
 // ==============================
 
 builder.Services.AddControllers();
+
+// ==============================
+// 表单上传的"缓冲"设置
+//
+// ⚠️ 为什么必须加这一段：
+//    ASP.NET Core 在解析 multipart（文件上传）时，如果内容超过 MemoryBufferThreshold
+//    （默认只有 64KB），它会先把内容缓存到【临时目录】(%TEMP%)。
+//    而【这台机器禁止写用户目录】→ 上传稍大一点的照片就会报：
+//        UnauthorizedAccessException:
+//        Access to the path '...\AppData\Local\Temp\ASPNETCORE_xxx.tmp' is denied.
+//    把阈值提到 10MB，10MB 以内的上传就全部留在内存里，不碰临时目录。
+//    （小图片能传成功、大图片失败，就是这个原因）
+// ==============================
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MemoryBufferThreshold = 10 * 1024 * 1024;      // 10MB 以内放内存，不落临时文件
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024;   // 整个表单最大 10MB
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Serial (COM12 meter)": {
+      "commandName": "Project",
+      "commandLineArgs": "all COM12"
+    },
+    "Modbus (virtual PLC)": {
+      "commandName": "Project",
+      "commandLineArgs": "all COM12"
+    }
+  }
+}

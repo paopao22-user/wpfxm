@@ -1,4 +1,4 @@
-﻿using IotGatewayLearning.Domain.Entities;
+using IotGatewayLearning.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,5 +27,8 @@ namespace IotGatewayLearning.Application.DTOs
         public List<string> Permissions { get; set; } = new();
 
         public DateTime? LastLoginAt { get; set; }  
+
+        // 用户头像的【可访问 URL】（后端读取时现签的 OSS 临时签名 URL；没上传过头像时为 null）
+        public string? AvatarUrl { get; set; }
     }
 }

@@ -1,0 +1,9 @@
+@Day44_MafWebApi_HostAddress = http://localhost:5080
+
+### 第三课：最小 MAF + DeepSeek WebAPI 调用
+POST {{Day44_MafWebApi_HostAddress}}/api/chat
+Content-Type: application/json
+
+{
+  "question": "三个有效温度为80、82、88摄氏度，未提供阈值。请说明观察结果。"
+}

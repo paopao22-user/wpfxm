@@ -1,9 +1,10 @@
-﻿using IotGatewayLearning.Application.DTOs;
+using IotGatewayLearning.Application.DTOs;
 using IotGatewayLearning.Application.Services.Interfaces;
 using IotGatewayLearning.Common.Exceptions;
 using IotGatewayLearning.Common.Responses;
 using IotGatewayLearning.Domain.Entities;
 using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Infrastructure.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,10 +20,14 @@ namespace IotGatewayLearning.Application.Services.Implementations
     {
         private readonly IUnitOfWork _unitOfWork;
 
-        // 构造函数注入工作单元，所有持久化操作通过 UoW 完成
-        public UserService(IUnitOfWork unitOfWork)
+        // 头像要"现签临时 URL"，所以这里依赖对象存储（Application → Infrastructure 是允许的方向）
+        private readonly IOssFileStorage _ossFileStorage;
+
+        // 构造函数注入工作单元 + 对象存储，所有持久化操作通过 UoW 完成
+        public UserService(IUnitOfWork unitOfWork, IOssFileStorage ossFileStorage)
         {
             _unitOfWork = unitOfWork;
+            _ossFileStorage = ossFileStorage;
         }
 
         /// <summary>
@@ -42,6 +47,51 @@ namespace IotGatewayLearning.Application.Services.Implementations
 
                 Status = user.Status
             };
+        }
+
+        /// <summary>
+        /// 保存用户头像：把 OSS 的 objectKey 写进 users.avatar_url
+        /// </summary>
+        public async Task SaveAvatarKeyAsync(long userId, string objectKey)
+        {
+            // 防线：objectKey 不能为空（为空说明上传那一步就没成功）
+            if (string.IsNullOrWhiteSpace(objectKey))
+            {
+                throw new ValidationAppException("头像地址不能为空");
+            }
+
+            // 步骤 2：通过工作单元的用户仓储查询该实体
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new AppException("用户不存在", 404);
+            }
+
+            // 步骤 3：在内存中修改实体属性
+            user.AvatarUrl = objectKey;
+
+            // 步骤 4：显式通知仓储标记该实体为 Modified
+            _unitOfWork.Users.Update(user);
+
+            // 步骤 5：统一持久化提交入库
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// 取用户头像的【可访问 URL】：读 objectKey → 现签一个临时 URL
+        /// </summary>
+        public async Task<string?> GetAvatarUrlAsync(long userId)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+
+            // 用户不存在 / 还没上传过头像 → 返回 null（前端显示默认头像）
+            if (user == null || string.IsNullOrWhiteSpace(user.AvatarUrl))
+            {
+                return null;
+            }
+
+            // 把 objectKey 变成"能直接点开的临时 URL"
+            return _ossFileStorage.BuildSignedUrl(user.AvatarUrl);
         }
 
         /// <summary>
@@ -96,6 +146,8 @@ namespace IotGatewayLearning.Application.Services.Implementations
                 RealName = realName,
                 PasswordHash = passwordHash,
                 Role = string.Empty,
+                // 数据库 avatar_url 为 NOT NULL；空字符串表示尚未上传头像。
+                AvatarUrl = string.Empty,
                 Status = request.Status
             };
 

@@ -1,4 +1,4 @@
-﻿using IotGatewayLearning.Application.DTOs;
+using IotGatewayLearning.Application.DTOs;
 using IotGatewayLearning.Common.Exceptions;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using IotGatewayLearning.Infrastructure.Repositories;
 using IotGatewayLearning.Application.Services;
 using IotGatewayLearning.Infrastructure.Repositories;
+using IotGatewayLearning.Infrastructure.Storage;
 
 namespace IotGatewayLearning.Application.Services
 {
@@ -24,13 +25,18 @@ namespace IotGatewayLearning.Application.Services
         //日记记录：AuthService
         private readonly ILogger<AuthService> _logger;
 
-        public AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, ILogger<AuthService> logger)
+        //头像要现签一个临时 URL，所以这里也依赖对象存储
+        private readonly IOssFileStorage _ossFileStorage;
+
+        public AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, ILogger<AuthService> logger, IOssFileStorage ossFileStorage)
         {
             _unitOfWork = unitOfWork;
 
             _tokenService = tokenService;
 
             _logger = logger;
+
+            _ossFileStorage = ossFileStorage;
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
@@ -124,7 +130,13 @@ namespace IotGatewayLearning.Application.Services
 
                     Permissions = permissions,
 
-                    LastLoginAt = user.LastLoginAt
+                    LastLoginAt = user.LastLoginAt,
+
+                    // 头像：数据库里存的是 objectKey，这里现签一个临时 URL 给前端
+                    // （没上传过头像 → user.AvatarUrl 为空 → 返回 null，前端显示默认头像）
+                    AvatarUrl = string.IsNullOrWhiteSpace(user.AvatarUrl)
+                                ? null
+                                : _ossFileStorage.BuildSignedUrl(user.AvatarUrl)
                 }
             };
         }

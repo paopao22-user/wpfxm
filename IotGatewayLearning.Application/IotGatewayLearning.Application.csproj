@@ -10,8 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="15.1.3" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.4" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
   </ItemGroup>
 
@@ -19,6 +21,12 @@
     <ProjectReference Include="..\IotGatewayLearning.Common\IotGatewayLearning.Common.csproj" />
     <ProjectReference Include="..\IotGatewayLearning.Domain\IotGatewayLearning.Domain.csproj" />
     <ProjectReference Include="..\IotGatewayLearning.Infrastructure\IotGatewayLearning.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="DTOs\DeviceData\Responses\" />
+    <Folder Include="DTOs\Mqtt\MqttRequests\" />
+    <Folder Include="DTOs\Mqtt\MqttResponses\" />
   </ItemGroup>
 
 </Project>
